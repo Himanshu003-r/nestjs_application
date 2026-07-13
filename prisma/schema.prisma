@@ -15,18 +15,34 @@ datasource db {
 }
 
 enum UserRole {
-  USER 
+  USER
   ADMIN
 }
 
 model User {
-  id String @id @default(cuid())
-  email String @unique
-  name String 
-  password String
-  role UserRole @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String          @id @default(cuid())
+  email          String          @unique
+  name           String
+  password       String
+  role           UserRole        @default(USER)
+  
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+  refreshTokens RefreshToken[]
 
- @@map("users")
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String
+  expiresAt DateTime
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
 }
