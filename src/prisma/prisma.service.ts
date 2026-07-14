@@ -12,6 +12,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit,OnModule
     }
 
     async onModuleDestroy() {
-        await this.$disconnect('Disconnected from PostgreSQL')
+        await this.$disconnect()
+        this.logger.log('Disconnected from PostgreSQL')
     }
 }
