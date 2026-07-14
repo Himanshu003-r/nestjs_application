@@ -7,9 +7,22 @@ import { OrderModule } from './modules/order/order.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { HealthModule } from './health/health.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [AuthModule, CatalogModule, OrderModule, PaymentModule, NotificationModule, PrismaModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    AuthModule,
+    CatalogModule,
+    OrderModule,
+    PaymentModule,
+    NotificationModule,
+    PrismaModule,
+    HealthModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
