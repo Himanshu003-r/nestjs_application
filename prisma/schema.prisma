@@ -46,3 +46,18 @@ model RefreshToken {
 
   @@map("refresh_tokens")
 }
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  price       Decimal  @db.Decimal(10, 2)
+  stock       Int
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("products")
+}

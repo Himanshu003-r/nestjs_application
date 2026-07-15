@@ -9,6 +9,7 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
 import { ConfigModule } from '@nestjs/config';
+import { ProductsModule } from './modules/products/products.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ConfigModule } from '@nestjs/config';
     NotificationModule,
     PrismaModule,
     HealthModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
