@@ -5,7 +5,8 @@ import { AuthController } from './controllers/auth/auth.controller';
 import { TokenService } from './services/token.service';
 import {JwtModule} from '@nestjs/jwt'
 import {ConfigModule, ConfigService} from '@nestjs/config'
-import { JwtStrategy } from './strategies/jwt.strategy/jwt.strategy';
+import { JwtStrategy } from './strategies/jwt.strategy';
+import { RolesGuard } from './guards/roles.guard';
 @Module({
   imports: [
     JwtModule.registerAsync({
@@ -20,7 +21,7 @@ import { JwtStrategy } from './strategies/jwt.strategy/jwt.strategy';
     }),
   
   ],
-  providers: [PasswordService, AuthService, TokenService, JwtStrategy],
+  providers: [PasswordService, AuthService, TokenService, JwtStrategy,RolesGuard],
   controllers: [AuthController],
 })
 export class AuthModule {}
