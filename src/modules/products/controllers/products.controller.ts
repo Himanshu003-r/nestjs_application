@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ProductsService } from '../services/products.service';
@@ -15,6 +16,7 @@ import { Roles } from 'src/modules/auth/decorator/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { CreateProductDto } from '../dto/create-product.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 
 @Controller('products')
 export class ProductsController {
@@ -28,8 +30,8 @@ export class ProductsController {
   }
 
   @Get()
-  getAll() {
-    return this.productService.getAllProduct();
+  getAll(@Query() paginationQuery: PaginationQueryDto) {
+    return this.productService.getAllProduct(paginationQuery);
   }
 
   @Get(':id')
