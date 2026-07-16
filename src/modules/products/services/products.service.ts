@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProductDto } from '../dto/create-product.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';
@@ -9,8 +9,31 @@ export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createProduct(createProductDto: CreateProductDto) {
+
+    const {name,description,price,stock,imageUrl,categoryId} = createProductDto
+
+    const category = await this.prisma.category.findUnique({
+      where:{id: categoryId}
+    })
+
+    if(!category){
+       throw new NotFoundException('Category does not exist')
+    }
+
+    if(!category.isActive){
+      throw new BadRequestException('Category is inactive. Please choose an active category.')
+    }
+
     const product = await this.prisma.product.create({
-      data: createProductDto,
+      data: {
+        name,
+        description,
+        price,
+        stock,
+        imageUrl,
+        categoryId
+      },
+      include:{category: true}
     });
 
     return {
