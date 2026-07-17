@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
-import { CatalogModule } from './modules/catalog/catalog.module';
+import { CatagoryModule } from './modules/catagory/category.module';
 import { OrderModule } from './modules/order/order.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { NotificationModule } from './modules/notification/notification.module';
@@ -17,7 +17,7 @@ import { ProductsModule } from './modules/products/products.module';
       isGlobal: true,
     }),
     AuthModule,
-    CatalogModule,
+    CatagoryModule,
     OrderModule,
     PaymentModule,
     NotificationModule,
