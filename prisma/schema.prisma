@@ -19,6 +19,7 @@ model User {
   name     String
   password String
   role     UserRole @default(USER)
+  cart     Cart?
 
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -42,15 +43,16 @@ model RefreshToken {
 }
 
 model Product {
-  id          String   @id @default(cuid())
+  id          String     @id @default(cuid())
   name        String
   description String
-  price       Decimal  @db.Decimal(10, 2)
+  price       Decimal    @db.Decimal(10, 2)
   stock       Int
   imageUrl    String?
-  isActive    Boolean  @default(true)
+  isActive    Boolean    @default(true)
   categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
+  category    Category   @relation(fields: [categoryId], references: [id])
+  cartItem    CartItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -68,4 +70,31 @@ model Category {
   updatedAt DateTime @updatedAt
 
   @@map("categories")
+}
+
+model Cart {
+  id       String     @id @default(cuid())
+  userId   String     @unique
+  user     User       @relation(fields: [userId], references: [id])
+  cartItem CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  //No two rows can have the same combination of columns
+  @@unique([cartId, productId])
+  @@map("cartItems")
 }
