@@ -13,6 +13,13 @@ enum UserRole {
   ADMIN
 }
 
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
 model User {
   id       String   @id @default(cuid())
   email    String   @unique
@@ -25,6 +32,7 @@ model User {
   updatedAt     DateTime       @updatedAt
   deletedAt     DateTime?
   refreshTokens RefreshToken[]
+  orders        Order[]
 
   @@map("users")
 }
@@ -43,16 +51,17 @@ model RefreshToken {
 }
 
 model Product {
-  id          String     @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
   description String
-  price       Decimal    @db.Decimal(10, 2)
+  price       Decimal     @db.Decimal(10, 2)
   stock       Int
   imageUrl    String?
-  isActive    Boolean    @default(true)
+  isActive    Boolean     @default(true)
   categoryId  String
-  category    Category   @relation(fields: [categoryId], references: [id])
+  category    Category    @relation(fields: [categoryId], references: [id])
   cartItem    CartItem[]
+  orderItems  OrderItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -97,4 +106,32 @@ model CartItem {
   //No two rows can have the same combination of columns
   @@unique([cartId, productId])
   @@map("cartItems")
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  status      OrderStatus @default(PENDING)
+  totalAmount Decimal     @db.Decimal(10, 2)
+  orderItem   OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+
+  @@map("orderItems")
 }
