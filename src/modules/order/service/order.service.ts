@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { OrderStatus, Prisma } from '@prisma/client';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -65,9 +65,12 @@ export class OrderService {
           },
         });
 
-        await tx.product.update({
+        const updatedProduct = await tx.product.updateMany({
           where: {
             id: cartItem.productId,
+            stock: {
+              gte: cartItem.quantity,
+            },
           },
           data: {
             stock: {
@@ -75,6 +78,10 @@ export class OrderService {
             },
           },
         });
+
+        if (updatedProduct.count === 0) {
+          throw new BadRequestException('Insufficient stock for product');
+        }
       }
 
       await tx.cartItem.deleteMany({
@@ -148,6 +155,48 @@ export class OrderService {
     return {
       data: order,
       message: 'Order fetched successfully',
+    };
+  }
+
+  async cancelOrder(userId: string, orderId: string) {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, userId },
+      include: { orderItem: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order does not exist');
+    }
+
+    if (order.status !== OrderStatus.PENDING) {
+      throw new BadRequestException('Only pending order can be cancelled');
+    }
+
+    const cancel = await this.prisma.$transaction(async (tx) => {
+      for (const orderItem of order.orderItem) {
+        await tx.product.update({
+          where: { id: orderItem?.productId },
+          data: {
+            stock: {
+              increment: orderItem?.quantity,
+            },
+          },
+        });
+      }
+
+      const updateOrder = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: OrderStatus.CANCELLED,
+        },
+      });
+
+      return updateOrder;
+    });
+
+    return {
+      data: cancel,
+      message: 'Order cancelled successfully',
     };
   }
 }
