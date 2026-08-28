@@ -94,4 +94,24 @@ export class PaymentService {
       message: 'Payment confirmed successfully',
     };
   }
+
+  async getPayment(userId:string, paymentId: string){
+   const payment = await this.prisma.payment.findFirst({
+    where:{id: paymentId,
+      order:{
+        userId
+      }
+    },
+    include:{order: true}
+   })
+
+   if(!payment){
+    throw new NotFoundException('Payment does not exist')
+   }
+
+   return{
+    data: payment,
+    message: 'Payment fetched successfully'
+   }
+  }
 }
