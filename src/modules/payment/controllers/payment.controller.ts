@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { PaymentService } from '../services/payment.service';
 import { CurrentUser } from 'src/modules/auth/decorator/current-user.decorator';
 import type { JwtPayload } from 'src/modules/auth/interfaces/jwt-payload.interface';
@@ -20,7 +20,16 @@ export class PaymentController {
 
   @Post('confirm/:id')
   @UseGuards(JwtAuthGuard)
-  confirmPayment(@CurrentUser() user: JwtPayload, @Param('id') paymentId: string) {
+  confirmPayment(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') paymentId: string,
+  ) {
     return this.paymentService.confirmPayment(user.sub, paymentId);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  getPayment(@CurrentUser() user: JwtPayload, @Param('id') paymentId: string) {
+    return this.paymentService.getPayment(user.sub, paymentId);
   }
 }
