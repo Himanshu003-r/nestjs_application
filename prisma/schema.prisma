@@ -17,6 +17,7 @@ enum OrderStatus {
   PENDING
   CONFIRMED
   CANCELLED
+  SHIPPED
   COMPLETED
 }
 

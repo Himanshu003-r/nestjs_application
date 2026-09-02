@@ -199,4 +199,57 @@ export class OrderService {
       message: 'Order cancelled successfully',
     };
   }
+
+  async shipOrder(orderId: string){
+   const order = await this.prisma.order.findFirst({
+    where:{id: orderId}
+   })
+
+   if(!order){
+    throw new NotFoundException('Order does not exist')
+   }
+
+   if(order.status !== OrderStatus.CONFIRMED){
+    throw new BadRequestException('Order cannot be shipped')
+   }
+
+   const updateOrderStatus = await this.prisma.order.update({
+    where:{id: order.id},
+    data:{
+      status: OrderStatus.SHIPPED
+    }
+   })
+
+   return{
+    data: updateOrderStatus,
+    message: 'Order status updated successfully'
+   }
+  }
+
+  async completeOrder(orderId: string){
+    const order = await this.prisma.order.findFirst({
+      where:{id: orderId}
+    })
+
+    if(!order){
+      throw new NotFoundException('Order does not exist')
+    }
+
+    if(order.status !== OrderStatus.SHIPPED){
+      throw new BadRequestException('Order cannot be completed')
+    }
+
+    const updateOrder = await this.prisma.order.update({
+      where:{id: order.id},
+      data:{
+        status: OrderStatus.COMPLETED
+      }
+    })
+
+    return{
+      data: updateOrder,
+      message: 'Order status updated successfully'
+    }
+  }
 }
+

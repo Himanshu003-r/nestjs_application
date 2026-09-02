@@ -32,4 +32,10 @@ export class PaymentController {
   getPayment(@CurrentUser() user: JwtPayload, @Param('id') paymentId: string) {
     return this.paymentService.getPayment(user.sub, paymentId);
   }
+
+  @Post('refund/:id')
+  @UseGuards(JwtAuthGuard)
+  makeRefund(@CurrentUser() user:JwtPayload, @Param('id') paymentId: string){
+    return this.paymentService.paymentRefund(user.sub,paymentId)
+  }
 }
