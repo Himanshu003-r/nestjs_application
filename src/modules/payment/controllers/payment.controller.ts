@@ -4,6 +4,7 @@ import { CurrentUser } from 'src/modules/auth/decorator/current-user.decorator';
 import type { JwtPayload } from 'src/modules/auth/interfaces/jwt-payload.interface';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
+import { VerifyPaymentDto } from '../dto/verify-payment.dto';
 
 @Controller('payments')
 export class PaymentController {
@@ -18,13 +19,13 @@ export class PaymentController {
     return this.paymentService.createPayment(user.sub, createPaymentDto);
   }
 
-  @Post('confirm/:id')
+  @Post('confirm')
   @UseGuards(JwtAuthGuard)
   confirmPayment(
     @CurrentUser() user: JwtPayload,
-    @Param('id') paymentId: string,
+    @Body() verifyPaymentDto: VerifyPaymentDto
   ) {
-    return this.paymentService.confirmPayment(user.sub, paymentId);
+    return this.paymentService.confirmPayment(user.sub, verifyPaymentDto);
   }
 
   @Get(':id')

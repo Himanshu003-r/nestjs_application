@@ -17,9 +17,15 @@ async function bootstrap() {
       forbidNonWhitelisted: true
     })
   )
-  await app.listen(process.env.PORT ?? 3000);
 
-  app.enableCors()
+    app.enableCors({
+    origin: [
+      'http://localhost:5500',
+      'http://127.0.0.1:5500',
+    ],
+  });
+
+    await app.listen(process.env.PORT ?? 3000);
 
   console.log(`Server running on http://localhost:${process.env.PORT ?? 3000}/api/v1`);
 }
