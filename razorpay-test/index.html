@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Razorpay Test</title>
+  </head>
+
+  <body>
+    <h2>E-Commerce Test</h2>
+
+    <!-- LOGIN SECTION -->
+    <div>
+      <h3>Login</h3>
+
+      <input id="email" type="email" placeholder="Email" />
+
+      <br /><br />
+
+      <input id="password" type="password" placeholder="Password" />
+
+      <br /><br />
+
+      <button onclick="login()">Login</button>
+    </div>
+
+    <hr />
+
+    <!-- ORDER SECTION -->
+    <div>
+      <h3>Order</h3>
+
+      <button onclick="createOrder()">Create Order & Pay</button>
+
+      <p id="status"></p>
+    </div>
+
+    <!-- RAZORPAY CHECKOUT -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <script>
+      // --------------------------------
+      // BACKEND URL
+      // --------------------------------
+
+      const API_URL = 'http://localhost:3000';
+
+      // --------------------------------
+      // ACCESS TOKEN
+      // --------------------------------
+
+      let accessToken = null;
+
+      // --------------------------------
+      // LOGIN
+      // --------------------------------
+
+      async function login() {
+        const email = document.getElementById('email').value;
+
+        const password = document.getElementById('password').value;
+
+        if (!email || !password) {
+          alert('Enter email and password');
+
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_URL}/api/v1/auth/login`, {
+            method: 'POST',
+
+            headers: {
+              'Content-Type': 'application/json',
+            },
+
+            body: JSON.stringify({
+              email: email,
+              password: password,
+            }),
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            alert(result.message || 'Login failed');
+
+            return;
+          }
+
+          // Store JWT access token in memory
+
+          accessToken = result.accessToken;
+          console.log("LOGIN RESPONSE:", result);
+
+          document.getElementById('status').innerText = 'Login successful!!';
+
+          console.log('Logged in');
+        } catch (error) {
+          console.error(error);
+
+          alert('Could not connect to backend');
+        }
+      }
+
+      // --------------------------------
+      // CREATE ORDER
+      // --------------------------------
+
+      async function createOrder() {
+        if (!accessToken) {
+          alert('Please login first');
+
+          return;
+        }
+
+        try {
+          document.getElementById('status').innerText = 'Creating order...';
+
+          const response = await fetch(`${API_URL}/api/v1/orders`, {
+            method: 'POST',
+
+            headers: {
+              'Content-Type': 'application/json',
+
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            alert(result.message || 'Order creation failed');
+
+            return;
+          }
+
+          // Get the newly created order
+
+          const order = result.data;
+
+          console.log('Created order:', order);
+
+          document.getElementById('status').innerText =
+            'Order created. Creating payment...';
+
+          // --------------------------------
+          // CREATE RAZORPAY PAYMENT
+          // --------------------------------
+
+          await createPayment(order.id);
+        } catch (error) {
+          console.error(error);
+
+          alert('Something went wrong');
+        }
+      }
+
+      // --------------------------------
+      // CREATE PAYMENT
+      // --------------------------------
+
+      async function createPayment(orderId) {
+        const response = await fetch(`${API_URL}/api/v1/payments`, {
+          method: 'POST',
+
+          headers: {
+            'Content-Type': 'application/json',
+
+            Authorization: `Bearer ${accessToken}`,
+          },
+
+          body: JSON.stringify({
+            orderId: orderId,
+
+            paymentMethod: 'CARD',
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          alert(result.message || 'Payment creation failed');
+
+          return;
+        }
+
+        const payment = result.data;
+
+        console.log('Payment created:', payment);
+
+        document.getElementById('status').innerText = 'Opening Razorpay...';
+
+        // --------------------------------
+        // RAZORPAY CHECKOUT
+        // --------------------------------
+
+        const options = {
+          key: payment.keyId,
+
+          amount: payment.amount,
+
+          currency: payment.currency,
+
+          order_id: payment.razorpayOrderId,
+
+          // Called after successful payment
+
+          handler: async function (response) {
+            console.log('Razorpay response:', response);
+
+            // --------------------------------
+            // VERIFY PAYMENT
+            // --------------------------------
+
+            await confirmPayment(response);
+          },
+        };
+
+        const razorpay = new Razorpay(options);
+
+        razorpay.open();
+      }
+
+      // --------------------------------
+      // CONFIRM PAYMENT
+      // --------------------------------
+
+      async function confirmPayment(paymentResponse) {
+        document.getElementById('status').innerText = 'Verifying payment...';
+
+        const response = await fetch(`${API_URL}/api/v1/payments/confirm`, {
+          method: 'POST',
+
+          headers: {
+            'Content-Type': 'application/json',
+
+            Authorization: `Bearer ${accessToken}`,
+          },
+
+          body: JSON.stringify({
+            razorpay_order_id: paymentResponse.razorpay_order_id,
+
+            razorpay_payment_id: paymentResponse.razorpay_payment_id,
+
+            razorpay_signature: paymentResponse.razorpay_signature,
+          }),
+        });
+
+        const result = await response.json();
+
+        console.log('Verification response:', result);
+
+        if (!response.ok) {
+          document.getElementById('status').innerText =
+            'Payment verification failed';
+
+          alert(result.message || 'Payment verification failed');
+
+          return;
+        }
+
+        document.getElementById('status').innerText =
+          'Payment successful!! Order confirmed ';
+
+        alert('Payment successful!');
+      }
+    </script>
+  </body>
+</html>
