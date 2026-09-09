@@ -45,4 +45,14 @@ export class RazorpayService {
   getKeyId(): string {
     return this.configService.getOrThrow<string>('RAZORPAY_API_KEY');
   }
+
+  // Verification of the webhooks
+  verifyWebhooksSignature(rawBody: Buffer, signature: string): boolean {
+    const expectedSignature = crypto
+      .createHmac('sha256',this.configService.getOrThrow<string>('RAZORPAY_WEBHOOK_SECRET'))
+      .update(rawBody)
+      .digest('hex');
+
+    return expectedSignature === signature;
+  }
 }
