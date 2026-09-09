@@ -204,4 +204,55 @@ export class PaymentService {
       message: 'Payment refunded successfully',
     };
   }
+
+  async handleWebhook(razorpayOrderId: string, razorpayPaymentId: string) {
+    const payment = await this.prisma.payment.findUnique({
+      where: {
+        razorpayOrderId,
+      },
+    });
+
+    if (!payment) {
+      throw new NotFoundException('Payment not found for Razorpay order');
+    }
+
+    if (payment.status === PaymentStatus.SUCCESS) {
+      return {
+        message: 'Payment already processed',
+      };
+    }
+
+    if (payment.status !== PaymentStatus.PENDING) {
+      throw new BadRequestException('Payment cannot be marked as successful');
+    }
+
+    // database update
+    const result = await this.prisma.$transaction(async (tx) => {
+      const updatedPayment = await tx.payment.update({
+        where: {
+          id: payment.id,
+        },
+        data: {
+          status: PaymentStatus.SUCCESS,
+          razorpayPaymentId,
+        },
+      });
+
+      await tx.order.update({
+        where: {
+          id: payment.orderId,
+        },
+        data: {
+          status: OrderStatus.CONFIRMED,
+        },
+      });
+
+      return updatedPayment;
+    });
+
+    return {
+      data: result,
+      message: 'Payment captured successfully',
+    };
+  }
 }
