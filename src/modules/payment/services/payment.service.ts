@@ -103,14 +103,37 @@ export class PaymentService {
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
-      const updatedPayment = await tx.payment.update({
-        where: { id: payment.id },
+      // Handling race condition
+      const updatedPayment = await tx.payment.updateMany({
+        where: {
+          id: payment.id,
+          status: PaymentStatus.PENDING,
+        },
         data: {
           status: PaymentStatus.SUCCESS,
           razorpayPaymentId: razorpay_payment_id,
           razorpaySignature: razorpay_signature,
         },
       });
+      
+      // Idempotency check for payments
+      if (updatedPayment.count === 0) {
+        const currentPayment = await tx.payment.findUnique({
+          where: {
+            id: payment.id,
+          },
+        });
+
+        if (currentPayment?.status === PaymentStatus.SUCCESS) {
+          return {
+            message: 'Payment already successful',
+          };
+        } else {
+          throw new BadRequestException(
+            `Payment cannot be confirmed. Current status: ${currentPayment?.status}`,
+          );
+        }
+      }
 
       await tx.order.update({
         where: { id: payment.orderId },
@@ -205,7 +228,11 @@ export class PaymentService {
     };
   }
 
-  async handleWebhook(razorpayOrderId: string, razorpayPaymentId: string) {
+  async handleWebhook(
+    event: string,
+    razorpayOrderId: string,
+    razorpayPaymentId: string,
+  ) {
     const payment = await this.prisma.payment.findUnique({
       where: {
         razorpayOrderId,
@@ -216,43 +243,98 @@ export class PaymentService {
       throw new NotFoundException('Payment not found for Razorpay order');
     }
 
-    if (payment.status === PaymentStatus.SUCCESS) {
+    if (event === 'payment.captured') {
+      if (payment.status === PaymentStatus.SUCCESS) {
+        return {
+          message: 'Payment already processed',
+        };
+      }
+
+      if (payment.status !== PaymentStatus.PENDING) {
+        throw new BadRequestException('Payment cannot be marked as successful');
+      }
+
+      // database update
+      const result = await this.prisma.$transaction(async (tx) => {
+        // Handling race condition
+        const updatedPayment = await tx.payment.updateMany({
+          where: {
+            id: payment.id,
+            status: PaymentStatus.PENDING,
+          },
+          data: {
+            status: PaymentStatus.SUCCESS,
+            razorpayPaymentId,
+          },
+        });
+
+        if (updatedPayment.count === 0) {
+          const currentPayment = await tx.payment.findUnique({
+            where: {
+              id: payment.id,
+            },
+          });
+
+          if (currentPayment?.status === PaymentStatus.SUCCESS) {
+            return {
+              message: 'Payment already successful',
+            };
+          } else {
+            throw new BadRequestException(
+              `Payment cannot be confirmed. Current status: ${currentPayment?.status}`,
+            );
+          }
+        }
+
+        await tx.order.update({
+          where: {
+            id: payment.orderId,
+          },
+          data: {
+            status: OrderStatus.CONFIRMED,
+          },
+        });
+
+        return updatedPayment;
+      });
+
       return {
-        message: 'Payment already processed',
+        data: result,
+        message: 'Payment captured successfully',
       };
     }
 
-    if (payment.status !== PaymentStatus.PENDING) {
-      throw new BadRequestException('Payment cannot be marked as successful');
-    }
+    if (event === 'payment.failed') {
+      if (payment.status === PaymentStatus.SUCCESS) {
+        return {
+          message: 'Payment already successful',
+        };
+      }
 
-    // database update
-    const result = await this.prisma.$transaction(async (tx) => {
-      const updatedPayment = await tx.payment.update({
+      if (payment.status === PaymentStatus.FAILED) {
+        return {
+          message: 'Payment already failed',
+        };
+      }
+
+      const result = await this.prisma.payment.update({
         where: {
           id: payment.id,
         },
         data: {
-          status: PaymentStatus.SUCCESS,
+          status: PaymentStatus.FAILED,
           razorpayPaymentId,
         },
       });
 
-      await tx.order.update({
-        where: {
-          id: payment.orderId,
-        },
-        data: {
-          status: OrderStatus.CONFIRMED,
-        },
-      });
-
-      return updatedPayment;
-    });
+      return {
+        data: result,
+        message: 'Payment transaction failed',
+      };
+    }
 
     return {
-      data: result,
-      message: 'Payment captured successfully',
+      message: `Unhandled event: ${event}`,
     };
   }
 }
