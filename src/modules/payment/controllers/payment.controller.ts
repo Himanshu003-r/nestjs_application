@@ -72,8 +72,16 @@ export class PaymentController {
       throw new UnauthorizedException('Invalid webhook signature');
     }
 
-    return {
-      message: 'Webhook signature verified',
-    };
+    const event = req.body.event;
+
+    const razorpayOrderId = req.body.payload.payment.entity.order_id;
+
+    const razorpayPaymentId = req.body.payload.payment.entity.id;
+
+    return this.paymentService.handleWebhook(
+      event,
+      razorpayOrderId,
+      razorpayPaymentId,
+    );
   }
 }
