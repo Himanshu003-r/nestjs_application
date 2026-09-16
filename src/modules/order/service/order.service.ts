@@ -158,6 +158,47 @@ export class OrderService {
     };
   }
 
+  async getAllOrders(paginationQueryDto: PaginationQueryDto) {
+    const { page, limit } = paginationQueryDto;
+    const skip = (page - 1) * limit;
+
+    const [total, orders] = await Promise.all([
+      this.prisma.order.count(),
+      this.prisma.order.findMany({
+        include: {
+          user: {
+            select:{
+              id:true,
+              name: true,
+              email: true
+            }
+          },
+          orderItem: {
+            include: {
+              product: true,
+            },
+          },
+          payment: true,
+        },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+    return {
+      data: orders,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+      message: 'Order fetched successfully',
+    };
+  }
+
   async cancelOrder(userId: string, orderId: string) {
     const order = await this.prisma.order.findFirst({
       where: { id: orderId, userId },
@@ -200,56 +241,55 @@ export class OrderService {
     };
   }
 
-  async shipOrder(orderId: string){
-   const order = await this.prisma.order.findFirst({
-    where:{id: orderId}
-   })
+  async shipOrder(orderId: string) {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId },
+    });
 
-   if(!order){
-    throw new NotFoundException('Order does not exist')
-   }
-
-   if(order.status !== OrderStatus.CONFIRMED){
-    throw new BadRequestException('Order cannot be shipped')
-   }
-
-   const updateOrderStatus = await this.prisma.order.update({
-    where:{id: order.id},
-    data:{
-      status: OrderStatus.SHIPPED
+    if (!order) {
+      throw new NotFoundException('Order does not exist');
     }
-   })
 
-   return{
-    data: updateOrderStatus,
-    message: 'Order status updated successfully'
-   }
+    if (order.status !== OrderStatus.CONFIRMED) {
+      throw new BadRequestException('Order cannot be shipped');
+    }
+
+    const updateOrderStatus = await this.prisma.order.update({
+      where: { id: order.id },
+      data: {
+        status: OrderStatus.SHIPPED,
+      },
+    });
+
+    return {
+      data: updateOrderStatus,
+      message: 'Order status updated successfully',
+    };
   }
 
-  async completeOrder(orderId: string){
+  async completeOrder(orderId: string) {
     const order = await this.prisma.order.findFirst({
-      where:{id: orderId}
-    })
+      where: { id: orderId },
+    });
 
-    if(!order){
-      throw new NotFoundException('Order does not exist')
+    if (!order) {
+      throw new NotFoundException('Order does not exist');
     }
 
-    if(order.status !== OrderStatus.SHIPPED){
-      throw new BadRequestException('Order cannot be completed')
+    if (order.status !== OrderStatus.SHIPPED) {
+      throw new BadRequestException('Order cannot be completed');
     }
 
     const updateOrder = await this.prisma.order.update({
-      where:{id: order.id},
-      data:{
-        status: OrderStatus.COMPLETED
-      }
-    })
+      where: { id: order.id },
+      data: {
+        status: OrderStatus.COMPLETED,
+      },
+    });
 
-    return{
+    return {
       data: updateOrder,
-      message: 'Order status updated successfully'
-    }
+      message: 'Order status updated successfully',
+    };
   }
 }
-

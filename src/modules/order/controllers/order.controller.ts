@@ -6,6 +6,7 @@ import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { Roles } from 'src/modules/auth/decorator/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { RolesGuard } from 'src/modules/auth/guards/roles.guard';
 
 @Controller('orders')
 export class OrderController {
@@ -23,6 +24,13 @@ export class OrderController {
     return this.orderService.getOrders(user.sub, paginationQuery)
   }
 
+  @Get('admin')
+  @UseGuards(JwtAuthGuard,RolesGuard)
+  @Roles(UserRole.ADMIN)
+  getAllOrders(@Query() paginationQuery: PaginationQueryDto){
+   return this.orderService.getAllOrders(paginationQuery)
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   getOne(@CurrentUser() user:JwtPayload, @Param('id') orderId: string){
@@ -30,14 +38,14 @@ export class OrderController {
   }
 
   @Patch('ship/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,RolesGuard)
   @Roles(UserRole.ADMIN)
   shipOrder(@Param('id') orderId: string){
     return this.orderService.shipOrder(orderId)
   }
 
   @Patch('complete/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,RolesGuard)
   @Roles(UserRole.ADMIN)
   completeOrder(@Param('id') orderId: string){
     return this.orderService.completeOrder(orderId)
