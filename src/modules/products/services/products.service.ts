@@ -1,27 +1,34 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateProductDto } from '../dto/create-product.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { ProductQueryDto } from '../dto/product-query.dto';
 
 @Injectable()
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createProduct(createProductDto: CreateProductDto) {
-
-    const {name,description,price,stock,imageUrl,categoryId} = createProductDto
+    const { name, description, price, stock, imageUrl, categoryId } =
+      createProductDto;
 
     const category = await this.prisma.category.findUnique({
-      where:{id: categoryId}
-    })
+      where: { id: categoryId },
+    });
 
-    if(!category){
-       throw new NotFoundException('Category does not exist')
+    if (!category) {
+      throw new NotFoundException('Category does not exist');
     }
 
-    if(!category.isActive){
-      throw new BadRequestException('Category is inactive. Please choose an active category.')
+    if (!category.isActive) {
+      throw new BadRequestException(
+        'Category is inactive. Please choose an active category.',
+      );
     }
 
     const product = await this.prisma.product.create({
@@ -31,9 +38,9 @@ export class ProductsService {
         price,
         stock,
         imageUrl,
-        categoryId
+        categoryId,
       },
-      include:{category: true}
+      include: { category: true },
     });
 
     return {
@@ -42,26 +49,45 @@ export class ProductsService {
     };
   }
 
-  async getAllProduct(paginationQueryDto: PaginationQueryDto) {
-    const { page, limit } = paginationQueryDto;
+  async getAllProduct(productQueryDto: ProductQueryDto) {
+    const { maxPrice, minPrice, categoryId, search, page, limit } =
+      productQueryDto;
     const skip = (page - 1) * limit;
 
-    const [total, products] = await Promise.all([
-      this.prisma.product.count({
-        where: {
-          isActive: true,
+    const where = {
+      isActive: true,
+      
+      ...(categoryId && {
+        categoryId,
+      }),
+
+      ...(search && {
+        name: {
+          contains: search,
+          mode: 'insensitive' as const,
         },
       }),
+
+      ...((minPrice !== undefined || maxPrice !== undefined) && {
+        price: {
+          ...(minPrice !== undefined && { gte: minPrice }),
+          ...(maxPrice !== undefined && { lte: maxPrice }),
+        },
+      }),
+    };
+
+    const [total, products] = await Promise.all([
+      this.prisma.product.count({ where }),
       this.prisma.product.findMany({
-        where: { isActive: true },
+        where,
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
       }),
     ]);
 
-    const totalPages = Math.ceil(total / limit)
-    
+    const totalPages = Math.ceil(total / limit);
+
     return {
       data: products,
       meta: {

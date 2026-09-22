@@ -17,6 +17,7 @@ import { UserRole } from '@prisma/client';
 import { CreateProductDto } from '../dto/create-product.dto';
 import { UpdateProductDto } from '../dto/update-product.dto';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { ProductQueryDto } from '../dto/product-query.dto';
 
 @Controller('products')
 export class ProductsController {
@@ -30,8 +31,8 @@ export class ProductsController {
   }
 
   @Get()
-  getAll(@Query() paginationQuery: PaginationQueryDto) {
-    return this.productService.getAllProduct(paginationQuery);
+  getAll(@Query() productQueryDto:ProductQueryDto) {
+    return this.productService.getAllProduct(productQueryDto);
   }
 
   @Get(':id')
