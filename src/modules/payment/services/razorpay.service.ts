@@ -25,6 +25,20 @@ export class RazorpayService {
     return razorpayOrder;
   }
 
+  // Razorpay refund order
+  async refundPayment(razorpayPaymentId: string, amount: number) {
+    const amountInPaisa = Math.round(amount * 100);
+
+    const razorpayRefund = await this.razorpay.payments.refund(
+      razorpayPaymentId,
+      {
+        amount: amountInPaisa,
+      },
+    );
+
+    return razorpayRefund;
+  }
+
   // Verification of payment from client
   verifyPaymentSignature(
     razorpayOrderId: string,
