@@ -37,6 +37,12 @@ export class OrderController {
    return this.orderService.getOrderById(user.sub, orderId)
   }
 
+  @Post('cancel/:id')
+  @UseGuards(JwtAuthGuard)
+  cancelOrder(@CurrentUser() user:JwtPayload, @Param('id') orderId: string){
+    return this.orderService.cancelOrder(user.sub, orderId)
+  }
+
   @Patch('ship/:id')
   @UseGuards(JwtAuthGuard,RolesGuard)
   @Roles(UserRole.ADMIN)
