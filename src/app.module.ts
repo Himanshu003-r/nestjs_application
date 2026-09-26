@@ -11,6 +11,7 @@ import { HealthModule } from './health/health.module';
 import { ConfigModule } from '@nestjs/config';
 import { ProductsModule } from './modules/products/products.module';
 import { CartModule } from './modules/cart/cart.module';
+import { NotificationService } from './notification/notification.service';
 
 @Module({
   imports: [
@@ -28,6 +29,6 @@ import { CartModule } from './modules/cart/cart.module';
     CartModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, NotificationService],
 })
 export class AppModule {}

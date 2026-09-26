@@ -34,6 +34,11 @@ enum PaymentMethod {
   COD
 }
 
+enum NotificationType {
+  ORDER
+  PAYMENT
+}
+
 model User {
   id       String   @id @default(cuid())
   email    String   @unique
@@ -47,6 +52,7 @@ model User {
   deletedAt     DateTime?
   refreshTokens RefreshToken[]
   orders        Order[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -160,12 +166,28 @@ model Payment {
   paymentMethod PaymentMethod
   transactionId String?       @unique
 
-  razorpayOrderId   String?   @unique
-  razorpayPaymentId String?   @unique
+  razorpayOrderId   String? @unique
+  razorpayPaymentId String? @unique
   razorpaySignature String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("payments")
+}
+
+model Notification {
+  id      String      @id @default(cuid())
+  userId  String
+  user    User        @relation(fields: [userId], references: [id])
+  type    NotificationType
+  title   String
+  message String
+  isRead  Boolean     @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("notifications")
 }
