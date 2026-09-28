@@ -3,8 +3,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrderStatus, PaymentStatus, Prisma } from '@prisma/client';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { OrderCreatedEvent } from 'src/events/order-created.event';
+import { OrderShippedEvent } from 'src/events/order-shipped.event';
 import { RazorpayService } from 'src/modules/payment/services/razorpay.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -13,6 +16,7 @@ export class OrderService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly razorpayService: RazorpayService,
+    private readonly eventEmitter: EventEmitter2
   ) {}
 
   async createOrder(userId: string) {
@@ -94,6 +98,11 @@ export class OrderService {
 
       return order;
     });
+
+    this.eventEmitter.emit(
+      'order.created',
+      new OrderCreatedEvent(userId, order.id)
+    )
 
     return {
       data: order,
@@ -302,6 +311,11 @@ export class OrderService {
         status: OrderStatus.SHIPPED,
       },
     });
+
+    this.eventEmitter.emit(
+      'order.shipped',
+      new OrderShippedEvent(order.userId, order.id)
+    )
 
     return {
       data: updateOrderStatus,
