@@ -17,7 +17,9 @@ export class NotificationController {
   ) {
     return this.notificationService.createNotification(
       user.sub,
-      createNotificationDto,
+      createNotificationDto.type,
+      createNotificationDto.title,
+      createNotificationDto.message
     );
   }
 
