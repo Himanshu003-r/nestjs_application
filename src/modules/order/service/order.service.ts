@@ -6,6 +6,8 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrderStatus, PaymentStatus, Prisma } from '@prisma/client';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { OrderCancelledEvent } from 'src/events/order-cancelled.event';
+import { OrderCompletedEvent } from 'src/events/order-completed.event';
 import { OrderCreatedEvent } from 'src/events/order-created.event';
 import { OrderShippedEvent } from 'src/events/order-shipped.event';
 import { RazorpayService } from 'src/modules/payment/services/razorpay.service';
@@ -16,7 +18,7 @@ export class OrderService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly razorpayService: RazorpayService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async createOrder(userId: string) {
@@ -101,8 +103,8 @@ export class OrderService {
 
     this.eventEmitter.emit(
       'order.created',
-      new OrderCreatedEvent(userId, order.id)
-    )
+      new OrderCreatedEvent(userId, order.id),
+    );
 
     return {
       data: order,
@@ -283,6 +285,11 @@ export class OrderService {
         },
       });
 
+      this.eventEmitter.emit(
+        'order.cancelled',
+        new OrderCancelledEvent(order.userId, order.id)
+      )
+
       return updateOrder;
     });
 
@@ -314,8 +321,8 @@ export class OrderService {
 
     this.eventEmitter.emit(
       'order.shipped',
-      new OrderShippedEvent(order.userId, order.id)
-    )
+      new OrderShippedEvent(order.userId, order.id),
+    );
 
     return {
       data: updateOrderStatus,
@@ -342,6 +349,11 @@ export class OrderService {
         status: OrderStatus.COMPLETED,
       },
     });
+
+    this.eventEmitter.emit(
+      'order.completed',
+      new OrderCompletedEvent(order.userId, order.id),
+    );
 
     return {
       data: updateOrder,
