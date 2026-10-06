@@ -10,6 +10,7 @@ import { OrderCancelledEvent } from 'src/events/order-cancelled.event';
 import { OrderCompletedEvent } from 'src/events/order-completed.event';
 import { OrderCreatedEvent } from 'src/events/order-created.event';
 import { OrderShippedEvent } from 'src/events/order-shipped.event';
+import { PaymentRefundEvent } from 'src/events/payment-refunded.event';
 import { RazorpayService } from 'src/modules/payment/services/razorpay.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -285,13 +286,20 @@ export class OrderService {
         },
       });
 
-      this.eventEmitter.emit(
-        'order.cancelled',
-        new OrderCancelledEvent(order.userId, order.id)
-      )
-
       return updateOrder;
     });
+
+    this.eventEmitter.emit(
+      'order.cancelled',
+      new OrderCancelledEvent(order.userId, order.id),
+    );
+
+    if (order.status === OrderStatus.CONFIRMED) {
+      this.eventEmitter.emit(
+        'payment.refunded',
+        new PaymentRefundEvent(order.userId, order.id),
+      );
+    }
 
     return {
       data: cancel,

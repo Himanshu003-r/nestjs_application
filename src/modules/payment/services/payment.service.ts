@@ -10,12 +10,15 @@ import { CreatePaymentDto } from '../dto/create-payment.dto';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
 import { RazorpayService } from './razorpay.service';
 import { VerifyPaymentDto } from '../dto/verify-payment.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PaymentSuccessEvent } from 'src/events/payment-success.event';
 
 @Injectable()
 export class PaymentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly razorpayService: RazorpayService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async createPayment(userId: string, createPaymentDto: CreatePaymentDto) {
@@ -115,7 +118,7 @@ export class PaymentService {
           razorpaySignature: razorpay_signature,
         },
       });
-      
+
       // Idempotency check for payments
       if (updatedPayment.count === 0) {
         const currentPayment = await tx.payment.findUnique({
@@ -126,13 +129,14 @@ export class PaymentService {
 
         if (currentPayment?.status === PaymentStatus.SUCCESS) {
           return {
+            paymentUpdated: false,
             message: 'Payment already successful',
           };
-        } else {
-          throw new BadRequestException(
-            `Payment cannot be confirmed. Current status: ${currentPayment?.status}`,
-          );
         }
+
+        throw new BadRequestException(
+          `Payment cannot be confirmed. Current status: ${currentPayment?.status}`,
+        );
       }
 
       await tx.order.update({
@@ -142,8 +146,18 @@ export class PaymentService {
         },
       });
 
-      return updatedPayment;
+      return {
+        paymentUpdated: true,
+        data: updatedPayment,
+      };
     });
+
+    if (result.paymentUpdated) {
+      this.eventEmitter.emit(
+        'payment.success',
+        new PaymentSuccessEvent(userId, payment.orderId),
+      );
+    }
 
     return {
       data: result,
