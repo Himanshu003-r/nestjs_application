@@ -12,7 +12,10 @@ describe('HealthService', () => {
     service = module.get<HealthService>(HealthService);
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+  it('should return health status', () => {
+    const result = service.getHealth()
+    expect(result.status).toBe('ok')
+    expect(result.service).toBe('commerce-platform')
+    expect(result.version).toBe('1.0.0')
   });
 });
