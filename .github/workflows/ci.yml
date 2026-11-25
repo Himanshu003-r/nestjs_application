@@ -28,7 +28,7 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma client
-        run: npx generate prisma
+        run: npx prisma generate
 
       - name: Build application
         run: npm run build
@@ -52,7 +52,7 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma client
-        run: npx generate prisma
+        run: npx prisma generate
 
       - name: Run tests
         run: npm test -- --runInBand
